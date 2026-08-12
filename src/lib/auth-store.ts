@@ -3,10 +3,8 @@ import type { AuthUser, RegistrationDraft, UserRole } from "./types";
 const AUTH_KEY = "hireloop_auth_user";
 const DRAFT_KEY = "hireloop_registration_draft";
 
-function emitAuthChange() {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event("hireloop-auth"));
-}
+let cachedRaw: string | null | undefined;
+let cachedUser: AuthUser | null = null;
 
 function safeParse<T>(raw: string | null): T | null {
   if (!raw) return null;
@@ -15,6 +13,11 @@ function safeParse<T>(raw: string | null): T | null {
   } catch {
     return null;
   }
+}
+
+function emitAuthChange() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("hireloop-auth"));
 }
 
 export function saveDraft(draft: RegistrationDraft) {
@@ -34,18 +37,27 @@ export function clearDraft() {
 
 export function saveUser(user: AuthUser) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+  const raw = JSON.stringify(user);
+  localStorage.setItem(AUTH_KEY, raw);
+  cachedRaw = raw;
+  cachedUser = user;
   emitAuthChange();
 }
 
 export function getUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
-  return safeParse<AuthUser>(localStorage.getItem(AUTH_KEY));
+  const raw = localStorage.getItem(AUTH_KEY);
+  if (raw === cachedRaw) return cachedUser;
+  cachedRaw = raw;
+  cachedUser = safeParse<AuthUser>(raw);
+  return cachedUser;
 }
 
 export function clearUser() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(AUTH_KEY);
+  cachedRaw = null;
+  cachedUser = null;
   emitAuthChange();
 }
 
