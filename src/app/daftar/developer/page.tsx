@@ -1,10 +1,12 @@
 "use client";
 
 import { AuthShell } from "@/components/auth/AuthShell";
+import { ConsentCheckbox } from "@/components/auth/ConsentCheckbox";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
-import { createUserFromDraft, saveDraft, saveUser } from "@/lib/auth-store";
+import { nextAuthPath, registerAccount } from "@/lib/auth-store";
 import { isValidEmail } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -15,8 +17,10 @@ export default function DeveloperRegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [organization, setOrganization] = useState("");
   const [useCase, setUseCase] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +29,9 @@ export default function DeveloperRegisterPage() {
     if (name.trim().length < 2) next.name = "Nama minimal 2 karakter";
     if (!isValidEmail(email)) next.email = "Email tidak valid";
     if (password.length < 8) next.password = "Sandi minimal 8 karakter";
+    if (password !== confirmPassword) next.confirmPassword = "Konfirmasi sandi tidak cocok";
     if (!useCase) next.useCase = "Pilih use case";
+    if (!accepted) next.accepted = "Anda harus menyetujui syarat & privasi";
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -34,19 +40,21 @@ export default function DeveloperRegisterPage() {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    const draft = {
-      role: "developer" as const,
+    const result = registerAccount({
+      role: "developer",
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
       organization: organization.trim() || undefined,
       useCase,
-    };
-    saveDraft(draft);
-    const user = createUserFromDraft(draft);
-    saveUser(user);
-    await new Promise((r) => setTimeout(r, 450));
-    router.push("/onboarding/developer");
+    });
+    if (!result.ok) {
+      setErrors({ email: result.error });
+      setLoading(false);
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 350));
+    router.push(nextAuthPath(result.user));
   }
 
   return (
@@ -86,8 +94,7 @@ export default function DeveloperRegisterPage() {
           />
         </Field>
         <Field label="Kata sandi" error={errors.password} hint="Minimal 8 karakter">
-          <Input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Buat sandi yang kuat"
@@ -96,6 +103,15 @@ export default function DeveloperRegisterPage() {
           />
         </Field>
         <PasswordStrength password={password} />
+        <Field label="Konfirmasi kata sandi" error={errors.confirmPassword}>
+          <PasswordInput
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Ulangi sandi"
+            error={!!errors.confirmPassword}
+            autoComplete="new-password"
+          />
+        </Field>
         <Field label="Organisasi / tim (opsional)">
           <Input
             value={organization}
@@ -116,12 +132,14 @@ export default function DeveloperRegisterPage() {
             <option value="partner">Partner / agency</option>
           </Select>
         </Field>
+        <ConsentCheckbox
+          checked={accepted}
+          onChange={setAccepted}
+          error={errors.accepted}
+        />
         <Button type="submit" size="lg" className="w-full mt-2" loading={loading}>
-          Lanjut ke onboarding
+          Lanjut verifikasi email
         </Button>
-        <p className="text-xs text-center text-[var(--muted)]">
-          Dengan mendaftar, Anda menyetujui syarat layanan dan kebijakan privasi Hireloop.
-        </p>
       </form>
     </AuthShell>
   );

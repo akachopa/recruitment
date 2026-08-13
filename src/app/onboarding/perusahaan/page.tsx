@@ -298,10 +298,14 @@ export default function PerusahaanOnboardingPage() {
   useEffect(() => {
     if (!user || user.role !== "perusahaan") {
       router.replace("/daftar/perusahaan");
+      return;
+    }
+    if (!user.emailVerified) {
+      router.replace("/verifikasi-email");
     }
   }, [router, user]);
 
-  if (!user || user.role !== "perusahaan") {
+  if (!user || user.role !== "perusahaan" || !user.emailVerified) {
     return <div className="min-h-screen bg-[var(--canvas)]" />;
   }
 

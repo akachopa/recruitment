@@ -30,6 +30,10 @@ export function DashboardShell({
       router.replace(`/dashboard/${user.role}`);
       return;
     }
+    if (!user.emailVerified) {
+      router.replace("/verifikasi-email");
+      return;
+    }
     if (!user.onboardingComplete) {
       router.replace(`/onboarding/${user.role}`);
     }
@@ -40,7 +44,12 @@ export function DashboardShell({
     router.push("/");
   }
 
-  if (!user || user.role !== expectedRole || !user.onboardingComplete) {
+  if (
+    !user ||
+    user.role !== expectedRole ||
+    !user.emailVerified ||
+    !user.onboardingComplete
+  ) {
     return <div className="min-h-screen bg-[var(--canvas)]" />;
   }
 
@@ -52,7 +61,10 @@ export function DashboardShell({
           <div className="flex items-center gap-3">
             <div className="hidden sm:block text-right">
               <p className="text-sm font-semibold text-[var(--ink)]">{user.name}</p>
-              <p className="text-xs text-[var(--muted)]">{roleLabel(user.role)}</p>
+              <p className="text-xs text-[var(--muted)]">
+                {roleLabel(user.role)}
+                {user.emailVerified ? " · Email terverifikasi" : ""}
+              </p>
             </div>
             <Button variant="outline" size="sm" onClick={logout}>
               Keluar

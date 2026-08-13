@@ -211,10 +211,14 @@ export default function DeveloperOnboardingPage() {
   useEffect(() => {
     if (!user || user.role !== "developer") {
       router.replace("/daftar/developer");
+      return;
+    }
+    if (!user.emailVerified) {
+      router.replace("/verifikasi-email");
     }
   }, [router, user]);
 
-  if (!user || user.role !== "developer") {
+  if (!user || user.role !== "developer" || !user.emailVerified) {
     return <div className="min-h-screen bg-[var(--canvas)]" />;
   }
 

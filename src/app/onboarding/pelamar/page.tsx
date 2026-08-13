@@ -392,10 +392,14 @@ export default function PelamarOnboardingPage() {
   useEffect(() => {
     if (!user || user.role !== "pelamar") {
       router.replace("/daftar/pelamar");
+      return;
+    }
+    if (!user.emailVerified) {
+      router.replace("/verifikasi-email");
     }
   }, [router, user]);
 
-  if (!user || user.role !== "pelamar") {
+  if (!user || user.role !== "pelamar" || !user.emailVerified) {
     return <div className="min-h-screen bg-[var(--canvas)]" />;
   }
 

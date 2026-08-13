@@ -8,7 +8,13 @@ export type AuthUser = {
   phone?: string;
   createdAt: string;
   onboardingComplete: boolean;
+  emailVerified: boolean;
+  acceptedTermsAt?: string;
   profile: DeveloperProfile | PerusahaanProfile | PelamarProfile;
+};
+
+export type StoredAccount = AuthUser & {
+  password: string;
 };
 
 export type DeveloperProfile = {
@@ -49,6 +55,7 @@ export type PelamarProfile = {
   expectedSalary?: string;
   cvFileName?: string;
   bio?: string;
+  marketingConsent?: boolean;
 };
 
 export type RegistrationDraft = {
@@ -57,11 +64,9 @@ export type RegistrationDraft = {
   email: string;
   password: string;
   phone?: string;
-  // company-specific at register
   companyName?: string;
   industry?: string;
   companySize?: string;
-  // developer-specific
   organization?: string;
   useCase?: string;
 };

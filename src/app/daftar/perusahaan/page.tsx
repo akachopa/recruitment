@@ -1,10 +1,12 @@
 "use client";
 
 import { AuthShell } from "@/components/auth/AuthShell";
+import { ConsentCheckbox } from "@/components/auth/ConsentCheckbox";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { Button } from "@/components/ui/Button";
 import { Field, Input, Select } from "@/components/ui/Field";
-import { createUserFromDraft, saveDraft, saveUser } from "@/lib/auth-store";
+import { nextAuthPath, registerAccount } from "@/lib/auth-store";
 import { COMPANY_SIZES, INDUSTRIES } from "@/lib/constants";
 import { isValidEmail } from "@/lib/utils";
 import Link from "next/link";
@@ -17,9 +19,11 @@ export default function PerusahaanRegisterPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [industry, setIndustry] = useState("");
   const [companySize, setCompanySize] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
@@ -28,9 +32,11 @@ export default function PerusahaanRegisterPage() {
     if (name.trim().length < 2) next.name = "Nama minimal 2 karakter";
     if (!isValidEmail(email)) next.email = "Email tidak valid";
     if (password.length < 8) next.password = "Sandi minimal 8 karakter";
+    if (password !== confirmPassword) next.confirmPassword = "Konfirmasi sandi tidak cocok";
     if (companyName.trim().length < 2) next.companyName = "Nama perusahaan wajib";
     if (!industry) next.industry = "Pilih industri";
     if (!companySize) next.companySize = "Pilih ukuran perusahaan";
+    if (!accepted) next.accepted = "Anda harus menyetujui syarat & privasi";
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -39,8 +45,8 @@ export default function PerusahaanRegisterPage() {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    const draft = {
-      role: "perusahaan" as const,
+    const result = registerAccount({
+      role: "perusahaan",
       name: name.trim(),
       email: email.trim().toLowerCase(),
       password,
@@ -48,12 +54,14 @@ export default function PerusahaanRegisterPage() {
       companyName: companyName.trim(),
       industry,
       companySize,
-    };
-    saveDraft(draft);
-    const user = createUserFromDraft(draft);
-    saveUser(user);
-    await new Promise((r) => setTimeout(r, 450));
-    router.push("/onboarding/perusahaan");
+    });
+    if (!result.ok) {
+      setErrors({ email: result.error });
+      setLoading(false);
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 350));
+    router.push(nextAuthPath(result.user));
   }
 
   return (
@@ -101,8 +109,7 @@ export default function PerusahaanRegisterPage() {
           </Field>
         </div>
         <Field label="Kata sandi" error={errors.password}>
-          <Input
-            type="password"
+          <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Minimal 8 karakter"
@@ -111,6 +118,15 @@ export default function PerusahaanRegisterPage() {
           />
         </Field>
         <PasswordStrength password={password} />
+        <Field label="Konfirmasi kata sandi" error={errors.confirmPassword}>
+          <PasswordInput
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Ulangi sandi"
+            error={!!errors.confirmPassword}
+            autoComplete="new-password"
+          />
+        </Field>
 
         <div className="pt-2 border-t border-[var(--line)]">
           <p className="text-sm font-semibold text-[var(--ink)] mb-3 mt-4">Data organisasi</p>
@@ -156,8 +172,13 @@ export default function PerusahaanRegisterPage() {
           </div>
         </div>
 
+        <ConsentCheckbox
+          checked={accepted}
+          onChange={setAccepted}
+          error={errors.accepted}
+        />
         <Button type="submit" size="lg" className="w-full mt-2" loading={loading}>
-          Buat akun & lanjut onboarding
+          Buat akun & verifikasi email
         </Button>
       </form>
     </AuthShell>
